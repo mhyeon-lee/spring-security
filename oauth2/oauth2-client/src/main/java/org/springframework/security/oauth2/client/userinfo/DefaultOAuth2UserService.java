@@ -19,6 +19,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.UserInfoRequestSchema;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
@@ -48,6 +49,7 @@ import java.util.Set;
  */
 public class DefaultOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 	private static final String MISSING_USER_INFO_URI_ERROR_CODE = "missing_user_info_uri";
+	private static final String MISSING_USER_INFO_REQUEST_SCHEMA_ERROR_CODE = "missing_user_info_request_schema";
 	private static final String MISSING_USER_NAME_ATTRIBUTE_ERROR_CODE = "missing_user_name_attribute";
 	private NimbusUserInfoResponseClient userInfoResponseClient = new NimbusUserInfoResponseClient();
 
@@ -61,6 +63,16 @@ public class DefaultOAuth2UserService implements OAuth2UserService<OAuth2UserReq
 				"Missing required UserInfo Uri in UserInfoEndpoint for Client Registration: " +
 					userRequest.getClientRegistration().getRegistrationId(),
 				null
+			);
+			throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+		}
+		UserInfoRequestSchema userInfoRequestSchema = userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserInfoRequestSchema();
+		if (userInfoRequestSchema == null) {
+			OAuth2Error oauth2Error = new OAuth2Error(
+					MISSING_USER_INFO_REQUEST_SCHEMA_ERROR_CODE,
+					"Missing required UserInfo UserInfoRequestSchema in UserInfoEndpoint for Client Registration: " +
+							userRequest.getClientRegistration().getRegistrationId(),
+					null
 			);
 			throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
 		}

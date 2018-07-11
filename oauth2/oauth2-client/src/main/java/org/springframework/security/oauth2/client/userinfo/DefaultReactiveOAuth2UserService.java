@@ -26,10 +26,12 @@ import java.util.Set;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.UserInfoRequestSchema;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
@@ -64,6 +66,7 @@ import reactor.core.publisher.Mono;
 public class DefaultReactiveOAuth2UserService implements ReactiveOAuth2UserService<OAuth2UserRequest, OAuth2User> {
 	private static final String INVALID_USER_INFO_RESPONSE_ERROR_CODE = "invalid_user_info_response";
 	private static final String MISSING_USER_INFO_URI_ERROR_CODE = "missing_user_info_uri";
+	private static final String MISSING_USER_INFO_REQUEST_SCHEMA_ERROR_CODE = "missing_user_info_request_schema";
 	private static final String MISSING_USER_NAME_ATTRIBUTE_ERROR_CODE = "missing_user_name_attribute";
 
 	private WebClient webClient = WebClient.create();
@@ -85,6 +88,15 @@ public class DefaultReactiveOAuth2UserService implements ReactiveOAuth2UserServi
 						null);
 				throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
 			}
+			UserInfoRequestSchema userInfoRequestSchema = userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserInfoRequestSchema();
+			if (userInfoRequestSchema == null) {
+				OAuth2Error oauth2Error = new OAuth2Error(
+						MISSING_USER_INFO_REQUEST_SCHEMA_ERROR_CODE,
+						"Missing required UserInfo UserInfoRequestSchema in UserInfoEndpoint for Client Registration: "
+								+ userRequest.getClientRegistration().getRegistrationId(),
+						null);
+				throw new OAuth2AuthenticationException(oauth2Error, oauth2Error.toString());
+			}
 			String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint()
 					.getUserNameAttributeName();
 			if (!StringUtils.hasText(userNameAttributeName)) {
@@ -99,9 +111,20 @@ public class DefaultReactiveOAuth2UserService implements ReactiveOAuth2UserServi
 			ParameterizedTypeReference<Map<String, Object>> typeReference = new ParameterizedTypeReference<Map<String, Object>>() {
 			};
 
-			Mono<Map<String, Object>> userAttributes = this.webClient.get()
-					.uri(userInfoUri)
-					.headers(bearerToken(userRequest.getAccessToken().getTokenValue()))
+			WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+			if (UserInfoRequestSchema.FORM.equals(userInfoRequestSchema)) {
+				requestHeadersSpec = this.webClient.post()
+						.uri(userInfoUri)
+						.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+						.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+						.syncBody("access_token=" + userRequest.getAccessToken().getTokenValue());
+			} else {
+				requestHeadersSpec = this.webClient.get()
+						.uri(userInfoUri)
+						.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+						.headers(bearerToken(userRequest.getAccessToken().getTokenValue()));
+			}
+			Mono<Map<String, Object>> userAttributes = requestHeadersSpec
 					.retrieve()
 					.onStatus(s -> s != HttpStatus.OK, response -> {
 						return parse(response).map(userInfoErrorResponse -> {

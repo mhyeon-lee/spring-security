@@ -35,6 +35,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.UserInfoRequestSchema;
 import org.springframework.util.Assert;
 
 import java.io.ByteArrayInputStream;
@@ -79,8 +80,11 @@ final class NimbusUserInfoResponseClient {
 													OAuth2AccessToken oauth2AccessToken) throws OAuth2AuthenticationException {
 		URI userInfoUri = URI.create(clientRegistration.getProviderDetails().getUserInfoEndpoint().getUri());
 		BearerAccessToken accessToken = new BearerAccessToken(oauth2AccessToken.getTokenValue());
+		UserInfoRequestSchema userInfoRequestSchema = clientRegistration.getProviderDetails().getUserInfoEndpoint().getUserInfoRequestSchema();
+		HTTPRequest.Method httpMethod = UserInfoRequestSchema.FORM.equals(userInfoRequestSchema)
+				? HTTPRequest.Method.POST : HTTPRequest.Method.GET;
 
-		UserInfoRequest userInfoRequest = new UserInfoRequest(userInfoUri, accessToken);
+		UserInfoRequest userInfoRequest = new UserInfoRequest(userInfoUri, httpMethod, accessToken);
 		HTTPRequest httpRequest = userInfoRequest.toHTTPRequest();
 		httpRequest.setAccept(MediaType.APPLICATION_JSON_VALUE);
 		httpRequest.setConnectTimeout(30000);
