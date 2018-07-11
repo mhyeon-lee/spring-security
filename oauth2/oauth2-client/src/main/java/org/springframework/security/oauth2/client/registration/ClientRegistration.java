@@ -17,6 +17,7 @@ package org.springframework.security.oauth2.client.registration;
 
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.UserInfoRequestSchema;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.util.Assert;
 
@@ -197,6 +198,7 @@ public final class ClientRegistration {
 		 */
 		public class UserInfoEndpoint {
 			private String uri;
+			private UserInfoRequestSchema userInfoRequestSchema = UserInfoRequestSchema.HEADER;
 			private String userNameAttributeName;
 
 			private UserInfoEndpoint() {
@@ -209,6 +211,15 @@ public final class ClientRegistration {
 			 */
 			public String getUri() {
 				return this.uri;
+			}
+
+			/**
+			 * Returns the userInfo request schema for the user info endpoint.
+			 *
+			 * @return the userInfo request schema for the user info endpoint.
+			 */
+			public UserInfoRequestSchema getUserInfoRequestSchema() {
+				return this.userInfoRequestSchema;
 			}
 
 			/**
@@ -247,6 +258,7 @@ public final class ClientRegistration {
 		private String authorizationUri;
 		private String tokenUri;
 		private String userInfoUri;
+		private UserInfoRequestSchema userInfoRequestSchema = UserInfoRequestSchema.HEADER;
 		private String userNameAttributeName;
 		private String jwkSetUri;
 		private String clientName;
@@ -373,6 +385,17 @@ public final class ClientRegistration {
 		}
 
 		/**
+		 * Sets the userInfo request schema for the user info endpoint.
+		 *
+		 * @param userInfoRequestSchema the userInfo request schema for the user info endpoint
+		 * @return the {@link Builder}
+		 */
+		public Builder userInfoRequestSchema(UserInfoRequestSchema userInfoRequestSchema) {
+			this.userInfoRequestSchema = userInfoRequestSchema;
+			return this;
+		}
+
+		/**
 		 * Sets the attribute name used to access the user's name from the user info response.
 		 *
 		 * @param userNameAttributeName the attribute name used to access the user's name from the user info response
@@ -435,6 +458,7 @@ public final class ClientRegistration {
 			providerDetails.authorizationUri = this.authorizationUri;
 			providerDetails.tokenUri = this.tokenUri;
 			providerDetails.userInfoEndpoint.uri = this.userInfoUri;
+			providerDetails.userInfoEndpoint.userInfoRequestSchema = this.userInfoRequestSchema;
 			providerDetails.userInfoEndpoint.userNameAttributeName = this.userNameAttributeName;
 			providerDetails.jwkSetUri = this.jwkSetUri;
 			clientRegistration.providerDetails = providerDetails;
